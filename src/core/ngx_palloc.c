@@ -15,16 +15,22 @@ static void *ngx_palloc_block(ngx_pool_t *pool, size_t size);
 static void *ngx_palloc_large(ngx_pool_t *pool, size_t size);
 
 
+/**
+ * @brief 创建一个内存池
+ * 
+ * @param size 内存池大小
+ * @param log 日志
+ * @return ngx_pool_t* 
+ */
 ngx_pool_t *
 ngx_create_pool(size_t size, ngx_log_t *log)
 {
     ngx_pool_t  *p;
-
+    // 分配一块内存，调用的是 ngx_alloc(size, log)
     p = ngx_memalign(NGX_POOL_ALIGNMENT, size, log);
     if (p == NULL) {
         return NULL;
     }
-
     p->d.last = (u_char *) p + sizeof(ngx_pool_t);
     p->d.end = (u_char *) p + size;
     p->d.next = NULL;
@@ -118,7 +124,13 @@ ngx_reset_pool(ngx_pool_t *pool)
     pool->large = NULL;
 }
 
-
+/**
+ * @brief 内存池分配一块内存，返回void类型指针
+ * 
+ * @param pool 内存池
+ * @param size 要分配的大小
+ * @return void* 
+ */
 void *
 ngx_palloc(ngx_pool_t *pool, size_t size)
 {
@@ -131,7 +143,13 @@ ngx_palloc(ngx_pool_t *pool, size_t size)
     return ngx_palloc_large(pool, size);
 }
 
-
+/**
+ * @brief 内存池分配一块内存，返回void类型指针（不考虑内存对齐）
+ * 
+ * @param pool 内存池
+ * @param size 要分配的大小
+ * @return void* 
+ */
 void *
 ngx_pnalloc(ngx_pool_t *pool, size_t size)
 {
@@ -144,7 +162,14 @@ ngx_pnalloc(ngx_pool_t *pool, size_t size)
     return ngx_palloc_large(pool, size);
 }
 
-
+/**
+ * @brief 在内存池中分配一小块内存
+ * 
+ * @param pool 内存池
+ * @param size 大小
+ * @param align 是否内存对齐
+ * @return ngx_inline* 
+ */
 static ngx_inline void *
 ngx_palloc_small(ngx_pool_t *pool, size_t size, ngx_uint_t align)
 {
@@ -159,17 +184,17 @@ ngx_palloc_small(ngx_pool_t *pool, size_t size, ngx_uint_t align)
         if (align) {
             m = ngx_align_ptr(m, NGX_ALIGNMENT);
         }
-
+        // 如果有足够的容量，直接分配
         if ((size_t) (p->d.end - m) >= size) {
             p->d.last = m + size;
 
             return m;
         }
-
+        // 容量不足，尝试使用下一个内存池
         p = p->d.next;
 
     } while (p);
-
+    // 如果没有可用的内存池，尝试创建一个
     return ngx_palloc_block(pool, size);
 }
 
@@ -182,7 +207,7 @@ ngx_palloc_block(ngx_pool_t *pool, size_t size)
     ngx_pool_t  *p, *new;
 
     psize = (size_t) (pool->d.end - (u_char *) pool);
-
+    // 分配一个和pool同样大小的内存池
     m = ngx_memalign(NGX_POOL_ALIGNMENT, psize, pool->log);
     if (m == NULL) {
         return NULL;
@@ -198,6 +223,15 @@ ngx_palloc_block(ngx_pool_t *pool, size_t size)
     m = ngx_align_ptr(m, NGX_ALIGNMENT);
     new->d.last = m + size;
 
+	/**
+	 * 缓存池的pool数据结构会挂载子节点的ngx_pool_t数据结构
+	 * 子节点的ngx_pool_t数据结构中只用到pool->d的结构，只保存数据
+	 * 每添加一个子节点，p->d.failed就会+1，当添加超过4个子节点的时候，
+	 * pool->current会指向到最新的子节点地址
+	 *
+	 * 这个逻辑主要是为了防止pool上的子节点过多，导致每次ngx_palloc循环pool->d.next链表
+	 * 将pool->current设置成最新的子节点之后，每次最大循环4次，不会去遍历整个缓存池链表
+	 */
     for (p = pool->current; p->d.next; p = p->d.next) {
         if (p->d.failed++ > 4) {
             pool->current = p->d.next;
@@ -209,7 +243,13 @@ ngx_palloc_block(ngx_pool_t *pool, size_t size)
     return m;
 }
 
-
+/**
+ * @brief 分配大数据块
+ * 
+ * @param pool 
+ * @param size 
+ * @return void* 
+ */
 static void *
 ngx_palloc_large(ngx_pool_t *pool, size_t size)
 {
