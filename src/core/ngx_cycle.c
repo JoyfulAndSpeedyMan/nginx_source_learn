@@ -88,7 +88,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         ngx_destroy_pool(pool);
         return NULL;
     }
-
+    // 复制old_cycle的prefix
     cycle->prefix.len = old_cycle->prefix.len;
     cycle->prefix.data = ngx_pstrdup(pool, &old_cycle->prefix);
     if (cycle->prefix.data == NULL) {
@@ -96,6 +96,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
+    // 复制old_cycle的error_log
     cycle->error_log.len = old_cycle->error_log.len;
     cycle->error_log.data = ngx_pnalloc(pool, old_cycle->error_log.len + 1);
     if (cycle->error_log.data == NULL) {
@@ -105,6 +106,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     ngx_cpystrn(cycle->error_log.data, old_cycle->error_log.data,
                 old_cycle->error_log.len + 1);
 
+    // 复制old_cycle的conf_file
     cycle->conf_file.len = old_cycle->conf_file.len;
     cycle->conf_file.data = ngx_pnalloc(pool, old_cycle->conf_file.len + 1);
     if (cycle->conf_file.data == NULL) {
@@ -114,6 +116,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     ngx_cpystrn(cycle->conf_file.data, old_cycle->conf_file.data,
                 old_cycle->conf_file.len + 1);
 
+    // 复制old_cycle的conf_param
     cycle->conf_param.len = old_cycle->conf_param.len;
     cycle->conf_param.data = ngx_pstrdup(pool, &old_cycle->conf_param);
     if (cycle->conf_param.data == NULL) {
@@ -121,16 +124,16 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
-
+    // 路径数组大小
     n = old_cycle->paths.nelts ? old_cycle->paths.nelts : 10;
-
+    // 路径数组内存初始化
     if (ngx_array_init(&cycle->paths, pool, n, sizeof(ngx_path_t *))
         != NGX_OK)
     {
         ngx_destroy_pool(pool);
         return NULL;
     }
-
+    // 路径数组内存填零
     ngx_memzero(cycle->paths.elts, n * sizeof(ngx_path_t *));
 
 
@@ -143,7 +146,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     ngx_rbtree_init(&cycle->config_dump_rbtree, &cycle->config_dump_sentinel,
                     ngx_str_rbtree_insert_value);
-
+    // 记录old_cycle中open_files的数量
     if (old_cycle->open_files.part.nelts) {
         n = old_cycle->open_files.part.nelts;
         for (part = old_cycle->open_files.part.next; part; part = part->next) {
@@ -153,7 +156,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     } else {
         n = 20;
     }
-
+    // 初始化新的open_files
     if (ngx_list_init(&cycle->open_files, pool, n, sizeof(ngx_open_file_t))
         != NGX_OK)
     {
@@ -161,7 +164,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
-
+    // 记录old_cycle的shared_memory大小
     if (old_cycle->shared_memory.part.nelts) {
         n = old_cycle->shared_memory.part.nelts;
         for (part = old_cycle->shared_memory.part.next; part; part = part->next)
@@ -172,7 +175,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     } else {
         n = 1;
     }
-
+    // 初始化新的shared_memory
     if (ngx_list_init(&cycle->shared_memory, pool, n, sizeof(ngx_shm_zone_t))
         != NGX_OK)
     {
@@ -180,28 +183,29 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
+    // listening数组大小
     n = old_cycle->listening.nelts ? old_cycle->listening.nelts : 10;
-
+    // 初始化listening数组
     if (ngx_array_init(&cycle->listening, pool, n, sizeof(ngx_listening_t))
         != NGX_OK)
     {
         ngx_destroy_pool(pool);
         return NULL;
     }
-
+    // listening数组元素填0
     ngx_memzero(cycle->listening.elts, n * sizeof(ngx_listening_t));
 
 
     ngx_queue_init(&cycle->reusable_connections_queue);
 
-
+    // 在内存池上分配指针所需要的空间
     cycle->conf_ctx = ngx_pcalloc(pool, ngx_max_module * sizeof(void *));
     if (cycle->conf_ctx == NULL) {
         ngx_destroy_pool(pool);
         return NULL;
     }
 
-
+    // 获取所有的hostname
     if (gethostname(hostname, NGX_MAXHOSTNAMELEN) == -1) {
         ngx_log_error(NGX_LOG_EMERG, log, ngx_errno, "gethostname() failed");
         ngx_destroy_pool(pool);
@@ -218,16 +222,16 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         ngx_destroy_pool(pool);
         return NULL;
     }
-
+    // 字符串转小写
     ngx_strlow(cycle->hostname.data, (u_char *) hostname, cycle->hostname.len);
 
-
+    // 将以前的modules复制到新的cycle中
     if (ngx_cycle_modules(cycle) != NGX_OK) {
         ngx_destroy_pool(pool);
         return NULL;
     }
 
-
+    // 
     for (i = 0; cycle->modules[i]; i++) {
         if (cycle->modules[i]->type != NGX_CORE_MODULE) {
             continue;

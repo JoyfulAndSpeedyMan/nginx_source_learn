@@ -30,6 +30,15 @@ void *ngx_array_push(ngx_array_t *a);
 void *ngx_array_push_n(ngx_array_t *a, ngx_uint_t n);
 
 
+/**
+ * @brief 初始化数组，在pool上分配数组元素所需要的内存
+ * 
+ * @param array 要初始化的数组
+ * @param pool 内存池
+ * @param n 元素个数
+ * @param size 单个元素的大小
+ * @return ngx_inline 
+ */
 static ngx_inline ngx_int_t
 ngx_array_init(ngx_array_t *array, ngx_pool_t *pool, ngx_uint_t n, size_t size)
 {

@@ -18,7 +18,13 @@ static void ngx_encode_base64_internal(ngx_str_t *dst, ngx_str_t *src,
 static ngx_int_t ngx_decode_base64_internal(ngx_str_t *dst, ngx_str_t *src,
     const u_char *basis);
 
-
+/**
+ * @brief 字符串转小写
+ * 
+ * @param dst 转小写后的字符串
+ * @param src 转换之前的字符串
+ * @param n 要转换的字符数量
+ */
 void
 ngx_strlow(u_char *dst, u_char *src, size_t n)
 {
@@ -46,7 +52,14 @@ ngx_strnlen(u_char *p, size_t n)
     return n;
 }
 
-
+/**
+ * @brief 复制字符串src到dst中
+ * 
+ * @param dst 
+ * @param src 
+ * @param n 
+ * @return u_char* 
+ */
 u_char *
 ngx_cpystrn(u_char *dst, u_char *src, size_t n)
 {
@@ -71,6 +84,13 @@ ngx_cpystrn(u_char *dst, u_char *src, size_t n)
 }
 
 
+/**
+ * @brief 创建字符串的副本
+ * 
+ * @param pool 
+ * @param src 
+ * @return u_char* 新的字符串指针
+ */
 u_char *
 ngx_pstrdup(ngx_pool_t *pool, ngx_str_t *src)
 {

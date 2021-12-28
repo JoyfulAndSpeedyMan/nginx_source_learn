@@ -15,13 +15,20 @@
 
 typedef struct ngx_list_part_s  ngx_list_part_t;
 
+/**
+ * @brief 链表元素
+ * 
+ */
 struct ngx_list_part_s {
     void             *elts;
     ngx_uint_t        nelts;
     ngx_list_part_t  *next;
 };
 
-
+/**
+ * @brief 链表
+ * 
+ */
 typedef struct {
     ngx_list_part_t  *last;
     ngx_list_part_t   part;

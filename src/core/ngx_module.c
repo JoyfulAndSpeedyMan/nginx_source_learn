@@ -38,7 +38,12 @@ ngx_preinit_modules(void)
     return NGX_OK;
 }
 
-
+/**
+ * @brief 将以前的modules复制到新的cycle中
+ * 
+ * @param cycle 
+ * @return ngx_int_t 
+ */
 ngx_int_t
 ngx_cycle_modules(ngx_cycle_t *cycle)
 {

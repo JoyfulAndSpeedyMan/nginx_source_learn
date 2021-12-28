@@ -207,7 +207,8 @@ main(int argc, char *const *argv)
     if (ngx_strerror_init() != NGX_OK) {
         return 1;
     }
-
+    
+    // 获取命令选项
     if (ngx_get_options(argc, argv) != NGX_OK) {
         return 1;
     }
@@ -250,15 +251,18 @@ main(int argc, char *const *argv)
     init_cycle.log = log;
     ngx_cycle = &init_cycle;
 
+    // 创建内存池
     init_cycle.pool = ngx_create_pool(1024, log);
     if (init_cycle.pool == NULL) {
         return 1;
     }
-
+    
+    // 保存参数到全局变量ngx_os_argv,ngx_argv
     if (ngx_save_argv(&init_cycle, argc, argv) != NGX_OK) {
         return 1;
     }
 
+    // 设置cycle中的配置参数
     if (ngx_process_options(&init_cycle) != NGX_OK) {
         return 1;
     }
@@ -289,6 +293,7 @@ main(int argc, char *const *argv)
         return 1;
     }
 
+    // 初始化cycle
     cycle = ngx_init_cycle(&init_cycle);
     if (cycle == NULL) {
         if (ngx_test_config) {
