@@ -155,14 +155,20 @@ static ngx_command_t  ngx_core_commands[] = {
       ngx_null_command
 };
 
-
+/**
+ * 核心模块配置文件
+ * ngx_core_module_create_conf 核心模块创建配置文件
+ * ngx_core_module_init_conf 核心模块初始化配置文件
+ */
 static ngx_core_module_t  ngx_core_module_ctx = {
     ngx_string("core"),
     ngx_core_module_create_conf,
     ngx_core_module_init_conf
 };
 
-
+/**
+ * 核心模块
+ */
 ngx_module_t  ngx_core_module = {
     NGX_MODULE_V1,
     &ngx_core_module_ctx,                  /* module context */
@@ -288,7 +294,11 @@ main(int argc, char *const *argv)
     if (ngx_add_inherited_sockets(&init_cycle) != NGX_OK) {
         return 1;
     }
-
+    
+    /* 
+     * 初始化所有模块；并对所有模块进行编号处理；
+     * ngx_modules数却是在自动编译的时候生成的，位于objs/ngx_modules.c文件中   
+     */
     if (ngx_preinit_modules() != NGX_OK) {
         return 1;
     }

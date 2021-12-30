@@ -318,7 +318,8 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     if (ngx_process == NGX_PROCESS_SIGNALLER) {
         return cycle;
     }
-
+    
+    // cycle->conf_ctx[ngx_core_module.index]
     ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
 
     if (ngx_test_config) {
