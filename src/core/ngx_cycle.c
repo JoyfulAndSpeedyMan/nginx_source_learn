@@ -225,13 +225,13 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     // 字符串转小写
     ngx_strlow(cycle->hostname.data, (u_char *) hostname, cycle->hostname.len);
 
-    // 将以前的modules复制到新的cycle中
+    // 创建模块以及创建模块的配置信息
     if (ngx_cycle_modules(cycle) != NGX_OK) {
         ngx_destroy_pool(pool);
         return NULL;
     }
 
-    // 
+    // 创建核心模块配置
     for (i = 0; cycle->modules[i]; i++) {
         if (cycle->modules[i]->type != NGX_CORE_MODULE) {
             continue;
@@ -240,11 +240,13 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         module = cycle->modules[i]->ctx;
 
         if (module->create_conf) {
+            // 创建核心模块配置，但是并未赋值
             rv = module->create_conf(cycle);
             if (rv == NULL) {
                 ngx_destroy_pool(pool);
                 return NULL;
             }
+            // 给cycle中的核心模块配置赋值
             cycle->conf_ctx[cycle->modules[i]->index] = rv;
         }
     }
@@ -252,7 +254,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     senv = environ;
 
-
+    // 配置文件解析
     ngx_memzero(&conf, sizeof(ngx_conf_t));
     /* STUB: init array ? */
     conf.args = ngx_array_create(pool, 10, sizeof(ngx_str_t));
@@ -260,7 +262,8 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         ngx_destroy_pool(pool);
         return NULL;
     }
-
+    
+    // 创建一个临时的内存池，后面会清空掉; conf也主要用于解析配置文件的临时变量
     conf.temp_pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, log);
     if (conf.temp_pool == NULL) {
         ngx_destroy_pool(pool);
@@ -279,12 +282,14 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     log->log_level = NGX_LOG_DEBUG_ALL;
 #endif
 
+    // 解析命令行中的配置参数；例如：nginx -t -c /usr/local/nginx/conf/nginx.conf
     if (ngx_conf_param(&conf) != NGX_CONF_OK) {
         environ = senv;
         ngx_destroy_cycle_pools(&conf);
         return NULL;
     }
 
+    // 解析配置文件/usr/local/nginx/conf/nginx.conf 信息
     if (ngx_conf_parse(&conf, &cycle->conf_file) != NGX_CONF_OK) {
         environ = senv;
         ngx_destroy_cycle_pools(&conf);
@@ -296,6 +301,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
                        cycle->conf_file.data);
     }
 
+    // 初始化核心模块的配置
     for (i = 0; cycle->modules[i]; i++) {
         if (cycle->modules[i]->type != NGX_CORE_MODULE) {
             continue;
@@ -319,7 +325,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return cycle;
     }
     
-    // cycle->conf_ctx[ngx_core_module.index]
+    // 获得核心模块的配置，等同于cycle->conf_ctx[ngx_core_module.index]
     ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
 
     if (ngx_test_config) {

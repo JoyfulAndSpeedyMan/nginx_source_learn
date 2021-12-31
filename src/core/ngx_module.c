@@ -43,7 +43,7 @@ ngx_preinit_modules(void)
 }
 
 /**
- * @brief 将以前的modules复制到新的cycle中
+ * @brief 创建模块以及创建模块的配置信息(复制模块到cycle中)
  * 
  * @param cycle 
  * @return ngx_int_t 
@@ -70,7 +70,12 @@ ngx_cycle_modules(ngx_cycle_t *cycle)
     return NGX_OK;
 }
 
-
+/**
+ * @brief 初始化模块配置信息
+ * 
+ * @param cycle 
+ * @return ngx_int_t 
+ */
 ngx_int_t
 ngx_init_modules(ngx_cycle_t *cycle)
 {
@@ -88,6 +93,9 @@ ngx_init_modules(ngx_cycle_t *cycle)
 }
 
 
+/**
+ * 统计每个类型下面总共多少个模块
+ */
 ngx_int_t
 ngx_count_modules(ngx_cycle_t *cycle, ngx_uint_t type)
 {

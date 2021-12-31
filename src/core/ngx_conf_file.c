@@ -76,7 +76,7 @@ ngx_conf_param(ngx_conf_t *cf)
     ngx_memzero(&conf_file, sizeof(ngx_conf_file_t));
 
     ngx_memzero(&b, sizeof(ngx_buf_t));
-
+    // 命令行的 -g 参数
     b.start = param->data;
     b.pos = param->data;
     b.last = param->data + param->len;

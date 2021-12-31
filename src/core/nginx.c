@@ -213,6 +213,7 @@ main(int argc, char *const *argv)
     if (ngx_strerror_init() != NGX_OK) {
         return 1;
     }
+
     
     // 获取命令选项
     if (ngx_get_options(argc, argv) != NGX_OK) {
@@ -1052,7 +1053,12 @@ ngx_process_options(ngx_cycle_t *cycle)
     return NGX_OK;
 }
 
-
+/**
+ * @brief 创建核心模块配置（只是还没有赋值）
+ * 
+ * @param cycle 
+ * @return void* 
+ */
 static void *
 ngx_core_module_create_conf(ngx_cycle_t *cycle)
 {
@@ -1097,7 +1103,13 @@ ngx_core_module_create_conf(ngx_cycle_t *cycle)
     return ccf;
 }
 
-
+/**
+ * @brief 初始化核心模块配置（赋值）
+ * 
+ * @param cycle 
+ * @param conf 
+ * @return char* 
+ */
 static char *
 ngx_core_module_init_conf(ngx_cycle_t *cycle, void *conf)
 {
@@ -1131,10 +1143,12 @@ ngx_core_module_init_conf(ngx_cycle_t *cycle, void *conf)
         ngx_str_set(&ccf->pid, NGX_PID_PATH);
     }
 
+    // 注意，这一步完成后ccf->pid会变成绝对路径
     if (ngx_conf_full_name(cycle, &ccf->pid, 0) != NGX_OK) {
         return NGX_CONF_ERROR;
     }
 
+    // 保存老pid文件的绝对路径为：pid文件绝对路径 + .oldbin
     ccf->oldpid.len = ccf->pid.len + sizeof(NGX_OLDPID_EXT);
 
     ccf->oldpid.data = ngx_pnalloc(cycle->pool, ccf->oldpid.len);
@@ -1147,7 +1161,7 @@ ngx_core_module_init_conf(ngx_cycle_t *cycle, void *conf)
 
 
 #if !(NGX_WIN32)
-
+    // 如果没有配置用户，默认使用nginx:nginx
     if (ccf->user == (uid_t) NGX_CONF_UNSET_UINT && geteuid() == 0) {
         struct group   *grp;
         struct passwd  *pwd;
@@ -1174,23 +1188,23 @@ ngx_core_module_init_conf(ngx_cycle_t *cycle, void *conf)
         ccf->group = grp->gr_gid;
     }
 
-
+    // lock file 默认路径 logs/nginx.lock
     if (ccf->lock_file.len == 0) {
         ngx_str_set(&ccf->lock_file, NGX_LOCK_PATH);
     }
-
+    // 绝对路径
     if (ngx_conf_full_name(cycle, &ccf->lock_file, 0) != NGX_OK) {
         return NGX_CONF_ERROR;
     }
 
     {
     ngx_str_t  lock_file;
-
+    // 老cycle的的lock file
     lock_file = cycle->old_cycle->lock_file;
 
     if (lock_file.len) {
         lock_file.len--;
-
+        // lock file不能改
         if (ccf->lock_file.len != lock_file.len
             || ngx_strncmp(ccf->lock_file.data, lock_file.data, lock_file.len)
                != 0)
@@ -1208,6 +1222,7 @@ ngx_core_module_init_conf(ngx_cycle_t *cycle, void *conf)
         }
 
     } else {
+        // 保存lock file路径
         cycle->lock_file.len = ccf->lock_file.len + 1;
         cycle->lock_file.data = ngx_pnalloc(cycle->pool,
                                       ccf->lock_file.len + sizeof(".accept"));
