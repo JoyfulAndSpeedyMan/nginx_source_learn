@@ -37,6 +37,7 @@ struct ngx_shm_zone_s {
 
 /**
  * Nginx全局变量cycle
+ * 图示 https://img-blog.csdn.net/20160715163314086?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQv/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center
  */
 struct ngx_cycle_s {
     void                  ****conf_ctx; /* 配置文件 上下文的数组，每个模块的配置信息*/

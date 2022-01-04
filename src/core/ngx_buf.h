@@ -17,14 +17,19 @@ typedef void *            ngx_buf_tag_t;
 
 typedef struct ngx_buf_s  ngx_buf_t;
 
+/**
+ * @brief nginx缓冲区
+ * 
+ */
 struct ngx_buf_s {
-    u_char          *pos;
-    u_char          *last;
+    // 逻辑上读取的用的两个指针，开始和结束
+    u_char          *pos; /* 当前位置指针（下次读取的位置） */
+    u_char          *last; /* 最后一个位置 */
     off_t            file_pos;
     off_t            file_last;
 
-    u_char          *start;         /* start of buffer */
-    u_char          *end;           /* end of buffer */
+    u_char          *start;         /* 缓冲区的开始 */
+    u_char          *end;           /* 缓冲区的结束 */
     ngx_buf_tag_t    tag;
     ngx_file_t      *file;
     ngx_buf_t       *shadow;

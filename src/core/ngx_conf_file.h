@@ -73,14 +73,16 @@
 
 #define NGX_MAX_CONF_ERRSTR  1024
 
-
+/**
+ * 模块支持的命令集结构
+ */
 struct ngx_command_s {
-    ngx_str_t             name;
-    ngx_uint_t            type;
-    char               *(*set)(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+    ngx_str_t             name; /* 命令名称 */
+    ngx_uint_t            type; /* 命令类别 */
+    char               *(*set)(ngx_conf_t *cf, ngx_command_t *cmd, void *conf); /* set回调函数 */
     ngx_uint_t            conf;
-    ngx_uint_t            offset;
-    void                 *post;
+    ngx_uint_t            offset; /* 偏移量，命令长度 */
+    void                 *post; /* 支持的回调方法；大多数情况为NULL*/
 };
 
 #define ngx_null_command  { ngx_null_string, 0, NULL, 0, 0, NULL }
@@ -99,7 +101,7 @@ typedef struct {
     ngx_file_t            file;
     ngx_buf_t            *buffer;
     ngx_buf_t            *dump;
-    ngx_uint_t            line;
+    ngx_uint_t            line; /* 行数 */
 } ngx_conf_file_t;
 
 
@@ -112,7 +114,10 @@ typedef struct {
 typedef char *(*ngx_conf_handler_pt)(ngx_conf_t *cf,
     ngx_command_t *dummy, void *conf);
 
-
+/**
+ * @brief ngx_conf_s主要定义需要解析的配置文件，需要解析的模块类型以及命令集类型的信息。辅助解析配置文件。
+ * 
+ */
 struct ngx_conf_s {
     char                 *name;
     ngx_array_t          *args;

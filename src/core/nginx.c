@@ -37,14 +37,17 @@ static ngx_conf_enum_t  ngx_debug_points[] = {
     { ngx_null_string, 0 }
 };
 
-
+/**
+ * @brief 核心模块的支持的命令
+ * 
+ */
 static ngx_command_t  ngx_core_commands[] = {
 
-    { ngx_string("daemon"),
-      NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_FLAG,
-      ngx_conf_set_flag_slot,
+    { ngx_string("daemon"), /* 命令名称 */
+      NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_FLAG, /* 类型 */
+      ngx_conf_set_flag_slot, /* 回调方法 */
       0,
-      offsetof(ngx_core_conf_t, daemon),
+      offsetof(ngx_core_conf_t, daemon), /* 偏移量；使用这个偏移量后，可以参考 ngx_core_module_create_conf*/
       NULL },
 
     { ngx_string("master_process"),
