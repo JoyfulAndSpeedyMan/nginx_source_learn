@@ -202,7 +202,13 @@ ngx_http_header_t  ngx_http_headers_in[] = {
     { ngx_null_string, 0, NULL }
 };
 
-
+/**
+ * @brief 侦听套接字 的回调函数。
+ * 该回调函数在ngx_event_accept函数中回调；
+ * 回调之后，会将读取事件回调函数rev->handler()修改成方法：ngx_http_wait_request_handler
+ * 
+ * @param c 
+ */
 void
 ngx_http_init_connection(ngx_connection_t *c)
 {
