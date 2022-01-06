@@ -148,7 +148,10 @@ typedef struct {
     ngx_array_t                handlers;
 } ngx_http_phase_t;
 
-
+/**
+ * @brief http的主配置
+ * 
+ */
 typedef struct {
     ngx_array_t                servers;         /* ngx_http_core_srv_conf_t */
 
@@ -175,7 +178,16 @@ typedef struct {
     ngx_http_phase_t           phases[NGX_HTTP_LOG_PHASE + 1];
 } ngx_http_core_main_conf_t;
 
-
+/**
+ * @brief server层的配置
+ * server
+   {
+    listen       80;
+    #server_name  blog.s135.com;
+    index index.html index.htm index.php;
+    root   /home/wwwroot/;
+ * 
+ */
 typedef struct {
     /* array of the ngx_http_server_name_t, "server_name" directive */
     ngx_array_t                 server_names;
@@ -296,7 +308,17 @@ typedef struct {
     ngx_str_t                  args;
 } ngx_http_err_page_t;
 
-
+/**
+ * @brief location 层的配置
+    location ~ .*\.(php|php5)?$
+    {
+        #fastcgi_pass  unix:/tmp/php-cgi.sock;
+        fastcgi_pass  127.0.0.1:9000;
+        fastcgi_index index.php;
+        include fcgi.conf;
+    }
+ * 
+ */
 struct ngx_http_core_loc_conf_s {
     ngx_str_t     name;          /* location name */
     ngx_str_t     escaped_name;
