@@ -69,7 +69,11 @@ static ngx_cycle_t      ngx_exit_cycle;
 static ngx_log_t        ngx_exit_log;
 static ngx_open_file_t  ngx_exit_log_file;
 
-
+/**
+ * @brief Nginx的多进程运行模式
+ * 
+ * @param cycle 
+ */
 void
 ngx_master_process_cycle(ngx_cycle_t *cycle)
 {
@@ -83,7 +87,8 @@ ngx_master_process_cycle(ngx_cycle_t *cycle)
     ngx_uint_t         live;
     ngx_msec_t         delay;
     ngx_core_conf_t   *ccf;
-
+    
+    // 设置能接收到的信号
     sigemptyset(&set);
     sigaddset(&set, SIGCHLD);
     sigaddset(&set, SIGALRM);
@@ -103,7 +108,7 @@ ngx_master_process_cycle(ngx_cycle_t *cycle)
 
     sigemptyset(&set);
 
-
+    // 保存进程标题
     size = sizeof(master_process);
 
     for (i = 0; i < ngx_argc; i++) {
@@ -124,9 +129,10 @@ ngx_master_process_cycle(ngx_cycle_t *cycle)
 
     ngx_setproctitle(title);
 
-
+    // 获取核心配置 ngx_core_conf_t
     ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
 
+    // 启动工作进程 - 多进程启动的核心函数
     ngx_start_worker_processes(cycle, ccf->worker_processes,
                                NGX_PROCESS_RESPAWN);
     ngx_start_cache_manager_processes(cycle, 0);
@@ -135,8 +141,10 @@ ngx_master_process_cycle(ngx_cycle_t *cycle)
     delay = 0;
     sigio = 0;
     live = 1;
-
+    // 主线程循环
     for ( ;; ) {
+        /* delay用来设置等待worker退出的时间，master接受了退出信号后，
+		 * 首先发送退出信号给worker，而worker退出需要一些时间*/
         if (delay) {
             if (ngx_sigalrm) {
                 sigio = 0;
@@ -160,6 +168,7 @@ ngx_master_process_cycle(ngx_cycle_t *cycle)
 
         ngx_log_debug0(NGX_LOG_DEBUG_EVENT, cycle->log, 0, "sigsuspend");
 
+        // 等待信号的到来，阻塞函数
         sigsuspend(&set);
 
         ngx_time_update();
