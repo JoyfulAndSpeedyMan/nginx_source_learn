@@ -77,7 +77,11 @@ ngx_atomic_t         *ngx_stat_waiting = &ngx_stat_waiting0;
 #endif
 
 
-
+/**
+ * event模块命令集
+ * 回调函数：ngx_events_block
+ * 用于解析 event{} 块中的配置参数
+ */
 static ngx_command_t  ngx_events_commands[] = {
 
     { ngx_string("events"),
@@ -90,14 +94,20 @@ static ngx_command_t  ngx_events_commands[] = {
       ngx_null_command
 };
 
-
+/**
+ * event模块上下文
+ */
 static ngx_core_module_t  ngx_events_module_ctx = {
     ngx_string("events"),
     NULL,
     ngx_event_init_conf
 };
 
-
+/**
+ * event模块
+ * 模块类型：NGX_CORE_MODULE
+ * 模块类型为核心模块，所以在ngx_init_cycle就会初始化conf
+ */
 ngx_module_t  ngx_events_module = {
     NGX_MODULE_V1,
     &ngx_events_module_ctx,                /* module context */
@@ -117,6 +127,15 @@ ngx_module_t  ngx_events_module = {
 static ngx_str_t  event_core_name = ngx_string("event_core");
 
 
+/**
+ * 定义Event核心模块的命令参数
+ * 主要：
+ * worker_connections 工作线程最大连接数
+ * use 使用什么模型，例如epoll
+ * multi_accept
+ * accept_mutex_delay
+ * debug_connection
+ */
 static ngx_command_t  ngx_event_core_commands[] = {
 
     { ngx_string("worker_connections"),
@@ -164,7 +183,11 @@ static ngx_command_t  ngx_event_core_commands[] = {
       ngx_null_command
 };
 
-
+/**
+ * Event核心模块上下文
+ * ngx_event_core_create_conf：创建配置文件
+ * ngx_event_core_init_conf：初始化配置文件
+ */
 static ngx_event_module_t  ngx_event_core_module_ctx = {
     &event_core_name,
     ngx_event_core_create_conf,            /* create configuration */
@@ -173,7 +196,12 @@ static ngx_event_module_t  ngx_event_core_module_ctx = {
     { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
 
-
+/**
+ * Event核心模块
+ * ngx_event_module_init：模块初始化
+ * ngx_event_process_init：进程初始化
+ * 类型：NGX_EVENT_MODULE
+ */
 ngx_module_t  ngx_event_core_module = {
     NGX_MODULE_V1,
     &ngx_event_core_module_ctx,            /* module context */
@@ -465,7 +493,12 @@ ngx_event_init_conf(ngx_cycle_t *cycle, void *conf)
     return NGX_CONF_OK;
 }
 
-
+/**
+ * @brief event事件核心模块初始化函数
+ * 
+ * @param cycle 
+ * @return ngx_int_t 
+ */
 static ngx_int_t
 ngx_event_module_init(ngx_cycle_t *cycle)
 {
@@ -477,6 +510,7 @@ ngx_event_module_init(ngx_cycle_t *cycle)
     ngx_core_conf_t     *ccf;
     ngx_event_conf_t    *ecf;
 
+    // 获取配置信息
     cf = ngx_get_conf(cycle->conf_ctx, ngx_events_module);
     ecf = (*cf)[ngx_event_core_module.ctx_index];
 
@@ -947,6 +981,15 @@ ngx_send_lowat(ngx_connection_t *c, size_t lowat)
 }
 
 
+/**
+ * 模块解析
+ * 事件模块配置如下：
+ * events {
+    worker_connections  1024;
+   }
+   光使用核心配置的方式，只能解析到 events 这一层。
+   如果需要继续往{}中的内容解析，就得重新调用ngx_conf_parse进行解析
+ */
 static char *
 ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -964,6 +1007,7 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     ngx_event_max_module = ngx_count_modules(cf->cycle, NGX_EVENT_MODULE);
 
+    // 分配内存空间
     ctx = ngx_pcalloc(cf->pool, sizeof(void *));
     if (ctx == NULL) {
         return NGX_CONF_ERROR;
@@ -976,6 +1020,7 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     *(void **) conf = ctx;
 
+    // 模块初始化，如果是NGX_EVENT_MODULE，则调用模块的create_conf方法
     for (i = 0; cf->cycle->modules[i]; i++) {
         if (cf->cycle->modules[i]->type != NGX_EVENT_MODULE) {
             continue;
@@ -997,6 +1042,7 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     cf->module_type = NGX_EVENT_MODULE;
     cf->cmd_type = NGX_EVENT_CONF;
 
+    // 调用配置解析，这次解析的是 块中的内容，非文件内容
     rv = ngx_conf_parse(cf, NULL);
 
     *cf = pcf;
@@ -1005,6 +1051,7 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return rv;
     }
 
+    // 初始化 模块的init_conf 方法
     for (i = 0; cf->cycle->modules[i]; i++) {
         if (cf->cycle->modules[i]->type != NGX_EVENT_MODULE) {
             continue;
@@ -1217,17 +1264,21 @@ ngx_event_debug_connection(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     return NGX_CONF_OK;
 }
 
-
+/**
+ * 创建Event的核心配置文件
+ */
 static void *
 ngx_event_core_create_conf(ngx_cycle_t *cycle)
 {
     ngx_event_conf_t  *ecf;
 
+    // 分配配置文件内容
     ecf = ngx_palloc(cycle->pool, sizeof(ngx_event_conf_t));
     if (ecf == NULL) {
         return NULL;
     }
 
+    // 设置默认值
     ecf->connections = NGX_CONF_UNSET_UINT;
     ecf->use = NGX_CONF_UNSET_UINT;
     ecf->multi_accept = NGX_CONF_UNSET;
@@ -1248,7 +1299,9 @@ ngx_event_core_create_conf(ngx_cycle_t *cycle)
     return ecf;
 }
 
-
+/**
+ * 初始化Event的核心配置文件
+ */
 static char *
 ngx_event_core_init_conf(ngx_cycle_t *cycle, void *conf)
 {
@@ -1296,7 +1349,11 @@ ngx_event_core_init_conf(ngx_cycle_t *cycle, void *conf)
     }
 
 #endif
-
+    /**
+     * 查询使用的事件模型:epoll、kqueue等
+     * 因为在模块初始化的时候，epoll\kqueue等event的模型模块都会被初始化
+     * 但是每个服务器只能选择一种相应的事件模型，所以选择一个适合自己的模块
+     */
     if (module == NULL) {
         for (i = 0; cycle->modules[i]; i++) {
 
