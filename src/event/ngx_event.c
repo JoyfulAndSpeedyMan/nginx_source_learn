@@ -643,7 +643,12 @@ ngx_timer_signal_handler(int signo)
 
 #endif
 
-
+/**
+ * @brief Event模块的进程初始化
+ * 
+ * @param cycle 
+ * @return ngx_int_t 
+ */
 static ngx_int_t
 ngx_event_process_init(ngx_cycle_t *cycle)
 {
@@ -655,9 +660,11 @@ ngx_event_process_init(ngx_cycle_t *cycle)
     ngx_event_conf_t    *ecf;
     ngx_event_module_t  *module;
 
+    //  获取event模块的配置
     ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     ecf = ngx_event_get_conf(cycle->conf_ctx, ngx_event_core_module);
 
+    // 多进程情况下，进程数大于1的情况，使用accept_mutex锁。惊群的时候需要用到。
     if (ccf->master && ccf->worker_processes > 1 && ecf->accept_mutex) {
         ngx_use_accept_mutex = 1;
         ngx_accept_mutex_held = 0;
@@ -678,6 +685,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
 #endif
 
+    // 初始化全局队列：ngx_posted_accept_events和ngx_posted_events
     ngx_queue_init(&ngx_posted_accept_events);
     ngx_queue_init(&ngx_posted_next_events);
     ngx_queue_init(&ngx_posted_events);
