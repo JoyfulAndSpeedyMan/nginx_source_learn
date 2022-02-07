@@ -379,7 +379,11 @@ ngx_http_init_connection(ngx_connection_t *c)
     }
 }
 
-
+/**
+ * @brief 读事件回调（read）
+ * 
+ * @param rev 
+ */
 static void
 ngx_http_wait_request_handler(ngx_event_t *rev)
 {

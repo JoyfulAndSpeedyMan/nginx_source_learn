@@ -13,7 +13,11 @@
 static ngx_int_t ngx_disable_accept_events(ngx_cycle_t *cycle, ngx_uint_t all);
 static void ngx_close_accepted_connection(ngx_connection_t *c);
 
-
+/**
+ * @brief 读事件回调（accept）
+ * 
+ * @param ev 
+ */
 void
 ngx_event_accept(ngx_event_t *ev)
 {
@@ -307,6 +311,7 @@ ngx_event_accept(ngx_event_t *ev)
         log->data = NULL;
         log->handler = NULL;
 
+        // 回调函数  ngx_http_init_connection
         ls->handler(c);
 
         if (ngx_event_flags & NGX_USE_KQUEUE_EVENT) {
@@ -316,19 +321,23 @@ ngx_event_accept(ngx_event_t *ev)
     } while (ev->available);
 }
 
-
+/**
+ * 获取accept锁
+ */
 ngx_int_t
 ngx_trylock_accept_mutex(ngx_cycle_t *cycle)
-{
+{   
+    // 拿到锁
     if (ngx_shmtx_trylock(&ngx_accept_mutex)) {
 
         ngx_log_debug0(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
                        "accept mutex locked");
 
+        // 多次进来，判断是否已经拿到锁(可重入锁)
         if (ngx_accept_mutex_held && ngx_accept_events == 0) {
             return NGX_OK;
         }
-
+        // 调用ngx_enable_accept_events，开启监听accpet事件
         if (ngx_enable_accept_events(cycle) == NGX_ERROR) {
             ngx_shmtx_unlock(&ngx_accept_mutex);
             return NGX_ERROR;
@@ -342,8 +351,9 @@ ngx_trylock_accept_mutex(ngx_cycle_t *cycle)
 
     ngx_log_debug1(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
                    "accept mutex lock failed: %ui", ngx_accept_mutex_held);
-
+    // 没有拿到锁，但是ngx_accept_mutex_held=1
     if (ngx_accept_mutex_held) {
+        // 没有拿到锁，调用ngx_disable_accept_events，将accpet事件删除
         if (ngx_disable_accept_events(cycle, 0) == NGX_ERROR) {
             return NGX_ERROR;
         }

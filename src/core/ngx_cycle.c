@@ -239,6 +239,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
         module = cycle->modules[i]->ctx;
 
+        // 有些模块的create_conf是NULL，例如event模块，他的外层结构是NULL，只解析最顶层的配置信息“events”，而不会解析{}块中的内容
         if (module->create_conf) {
             // 创建核心模块配置，但是并未赋值
             rv = module->create_conf(cycle);

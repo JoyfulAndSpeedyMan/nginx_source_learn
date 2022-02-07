@@ -1038,7 +1038,7 @@ ngx_epoll_create_conf(ngx_cycle_t *cycle)
     return epcf;
 }
 
-
+// epoll初始化
 static char *
 ngx_epoll_init_conf(ngx_cycle_t *cycle, void *conf)
 {

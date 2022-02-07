@@ -217,7 +217,11 @@ ngx_module_t  ngx_event_core_module = {
     NGX_MODULE_V1_PADDING
 };
 
-
+/**
+ * @brief 进程事件分发器
+ * 
+ * @param cycle 
+ */
 void
 ngx_process_events_and_timers(ngx_cycle_t *cycle)
 {
@@ -242,20 +246,45 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
 
 #endif
     }
-
+    /**
+	 * ngx_use_accept_mutex变量代表是否使用accept互斥体
+	 * 默认是使用，可以通过accept_mutex off;指令关闭；
+	 * accept mutex 的作用就是避免惊群，同时实现负载均衡
+	 */
     if (ngx_use_accept_mutex) {
+        /**
+         * ngx_accept_disabled = ngx_cycle->connection_n / 8 - ngx_cycle->free_connection_n;
+         * 
+         * 当剩余连接数小于总连接数的八分之一时，其值才大于 0，而且剩余的连接数越小，这个值越大。
+         * 再看第二段代码，当 ngx_accept_disabled 大于 0 时，不会去尝试获取 accept_mutex 锁，
+         * 并且将 ngx_accept_disabled 减 1，于是，每次执行到此处时，都会去减 1，直到小于 0。
+         * 不去获取 accept_mutex 锁，就是等于让出获取连接的机会，很显然可以看出，当空余连接越少时，
+         * ngx_accept_disable 越大，于是让出的机会就越多，这样其它进程获取锁的机会也就越大。
+		 */
         if (ngx_accept_disabled > 0) {
             ngx_accept_disabled--;
 
         } else {
+            // 获取锁失败
             if (ngx_trylock_accept_mutex(cycle) == NGX_ERROR) {
                 return;
             }
-
+            // 拿到锁
             if (ngx_accept_mutex_held) {
+                /**
+				 * 给flags增加标记NGX_POST_EVENTS，这个标记作为处理时间核心函数ngx_process_events的一个参数，这个函数中所有事件将延后处理。
+				 * accept事件都放到ngx_posted_accept_events链表中，
+				 * epollin|epollout普通事件都放到ngx_posted_events链表中
+				 **/
                 flags |= NGX_POST_EVENTS;
-
             } else {
+                /**
+				 * 1. 获取锁失败，意味着既不能让当前worker进程频繁的试图抢锁，也不能让它经过太长事件再去抢锁
+				 * 2. 开启了timer_resolution时间精度，需要让ngx_process_change方法在没有新事件的时候至少等待ngx_accept_mutex_delay毫秒之后再去试图抢锁
+				 * 3. 没有开启时间精度时，如果最近一个定时器事件的超时时间距离现在超过了ngx_accept_mutex_delay毫秒，也要把timer设置为ngx_accept_mutex_delay毫秒
+				 * 4. 不能让ngx_process_change方法在没有新事件的时候等待的时间超过ngx_accept_mutex_delay，这会影响整个负载均衡机制
+				 * 5. 如果拿到锁的进程能很快处理完accpet，而没拿到锁的一直在等待，容易造成进程忙的很忙，空的很空
+				 */
                 if (timer == NGX_TIMER_INFINITE
                     || timer > ngx_accept_mutex_delay)
                 {
@@ -271,22 +300,35 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
     }
 
     delta = ngx_current_msec;
-
+    /**
+	 * 事件调度函数
+	 * 1. 当拿到锁，flags=NGX_POST_EVENTS的时候，不会直接处理事件，
+	 * 将accept事件放到ngx_posted_accept_events，read事件放到ngx_posted_events队列
+	 * 2. 当没有拿到锁，则处理的全部是read事件，直接进行回调函数处理
+	 * 参数：timer-epoll_wait超时时间  (ngx_accept_mutex_delay-延迟拿锁事件   NGX_TIMER_INFINITE-正常的epollwait等待事件)
+	 */
     (void) ngx_process_events(cycle, timer, flags);
 
     delta = ngx_current_msec - delta;
 
     ngx_log_debug1(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
                    "timer delta: %M", delta);
-
+    /**
+	 * 1. ngx_posted_accept_events是一个事件队列，暂存epoll从监听套接口wait到的accept事件
+	 * 2. 这个方法是循环处理accpet事件列队上的accpet事件
+	 */
     ngx_event_process_posted(cycle, &ngx_posted_accept_events);
 
+    // 如果拿到锁，处理完accept事件后，则释放锁
     if (ngx_accept_mutex_held) {
         ngx_shmtx_unlock(&ngx_accept_mutex);
     }
 
     ngx_event_expire_timers();
-
+	/**
+	 * 1. 普通事件都会存放在ngx_posted_events队列上
+	 * 2. 这个方法是循环处理read事件列队上的read事件
+	 */
     ngx_event_process_posted(cycle, &ngx_posted_events);
 }
 
@@ -690,10 +732,12 @@ ngx_event_process_init(ngx_cycle_t *cycle)
     ngx_queue_init(&ngx_posted_next_events);
     ngx_queue_init(&ngx_posted_events);
 
+    // 初始化event模块的时间
     if (ngx_event_timer_init(cycle->log) == NGX_ERROR) {
         return NGX_ERROR;
     }
 
+    // 找到事件模型的模块，例如epoll/kqueue
     for (m = 0; cycle->modules[m]; m++) {
         if (cycle->modules[m]->type != NGX_EVENT_MODULE) {
             continue;
@@ -705,6 +749,10 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
         module = cycle->modules[m]->ctx;
 
+        /**
+         * 调用epoll/kqueue等模型模块的init初始化函数
+         * epoll调用的是ngx_epoll_init这个方法
+         */
         if (module->actions.init(cycle, ngx_timer_resolution) != NGX_OK) {
             /* fatal */
             exit(2);
@@ -769,6 +817,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
 #endif
 
+    // 分配一块内存，存储连接
     cycle->connections =
         ngx_alloc(sizeof(ngx_connection_t) * cycle->connection_n, cycle->log);
     if (cycle->connections == NULL) {
@@ -777,6 +826,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
     c = cycle->connections;
 
+    // 分配一块内存，存放读取事件
     cycle->read_events = ngx_alloc(sizeof(ngx_event_t) * cycle->connection_n,
                                    cycle->log);
     if (cycle->read_events == NULL) {
@@ -789,6 +839,7 @@ ngx_event_process_init(ngx_cycle_t *cycle)
         rev[i].instance = 1;
     }
 
+    // 分配一块内存，存储写入事件
     cycle->write_events = ngx_alloc(sizeof(ngx_event_t) * cycle->connection_n,
                                     cycle->log);
     if (cycle->write_events == NULL) {
@@ -802,10 +853,10 @@ ngx_event_process_init(ngx_cycle_t *cycle)
 
     i = cycle->connection_n;
     next = NULL;
-
+    // 初始化连接，通过data指针初始化为一个连接的单向链表
     do {
         i--;
-
+        // 关联其他连接
         c[i].data = next;
         c[i].read = &cycle->read_events[i];
         c[i].write = &cycle->write_events[i];
@@ -814,11 +865,13 @@ ngx_event_process_init(ngx_cycle_t *cycle)
         next = &c[i];
     } while (i);
 
+    // 初始时空闲连接为单向链表的第一个
     cycle->free_connections = next;
     cycle->free_connection_n = cycle->connection_n;
 
     /* for each listening socket */
 
+    // 初始化侦听器
     ls = cycle->listening.elts;
     for (i = 0; i < cycle->listening.nelts; i++) {
 
@@ -906,7 +959,8 @@ ngx_event_process_init(ngx_cycle_t *cycle)
         }
 
 #else
-
+        // tips: SOCK_STREA是基于TCP, SOCK_DGRAM基于UDP
+        // 所以一开始的读事件处理器都是ngx_event_accept
         rev->handler = (c->type == SOCK_STREAM) ? ngx_event_accept
                                                 : ngx_event_recvmsg;
 
