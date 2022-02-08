@@ -233,6 +233,7 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
         flags = 0;
 
     } else {
+        // 找到当前红黑树当中的最小的事件，传递给epoll的wait，保证epoll可以该时间内可以超时，可以使得超时的事件得到处理
         timer = ngx_event_find_timer();
         flags = NGX_UPDATE_TIME;
 
@@ -277,7 +278,9 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
 				 * epollin|epollout普通事件都放到ngx_posted_events链表中
 				 **/
                 flags |= NGX_POST_EVENTS;
-            } else {
+            }
+            // 没拿到锁 
+            else {
                 /**
 				 * 1. 获取锁失败，意味着既不能让当前worker进程频繁的试图抢锁，也不能让它经过太长事件再去抢锁
 				 * 2. 开启了timer_resolution时间精度，需要让ngx_process_change方法在没有新事件的时候至少等待ngx_accept_mutex_delay毫秒之后再去试图抢锁
@@ -324,6 +327,7 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
         ngx_shmtx_unlock(&ngx_accept_mutex);
     }
 
+    // 处理红黑树中所有超时的事件
     ngx_event_expire_timers();
 	/**
 	 * 1. 普通事件都会存放在ngx_posted_events队列上

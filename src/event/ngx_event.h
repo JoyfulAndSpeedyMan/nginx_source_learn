@@ -60,7 +60,7 @@ struct ngx_event_s {
     unsigned         error:1;
 
     unsigned         timedout:1;
-    unsigned         timer_set:1;
+    unsigned         timer_set:1; /* 是否设置过定时器*/
 
     unsigned         delayed:1;
 
@@ -114,7 +114,7 @@ struct ngx_event_s {
 
     ngx_log_t       *log;
 
-    ngx_rbtree_node_t   timer;
+    ngx_rbtree_node_t   timer; /* 定时器节点*/
 
     /* the posted queue */
     ngx_queue_t      queue;
