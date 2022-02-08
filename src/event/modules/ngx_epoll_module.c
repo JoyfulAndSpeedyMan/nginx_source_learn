@@ -867,7 +867,7 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
         if (timer != NGX_TIMER_INFINITE) {
             return NGX_OK;
         }
-
+        // 无限期等待，但是事件数量为0，说明epoll_wait()函数出了问题
         ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
                       "epoll_wait() returned no events without timeout");
         return NGX_ERROR;
