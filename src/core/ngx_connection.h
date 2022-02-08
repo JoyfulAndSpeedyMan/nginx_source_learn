@@ -127,7 +127,7 @@ typedef enum {
  * 
  */
 struct ngx_connection_s {
-    void               *data; /* 关联其它的 ngx_connection_s */
+    void               *data;
     ngx_event_t        *read; /* 读取数据事件 */
     ngx_event_t        *write; /* 写入事件*/
 

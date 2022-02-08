@@ -56,7 +56,7 @@ ngx_unix_recv(ngx_connection_t *c, u_char *buf, size_t size)
         ngx_log_debug2(NGX_LOG_DEBUG_EVENT, c->log, 0,
                        "recv: eof:%d, avail:%d",
                        rev->pending_eof, rev->available);
-
+        // 接收的数据为空，则表示当前客户端连接上来了，但是数据还未上来，
         if (rev->available == 0 && !rev->pending_eof) {
             rev->ready = 0;
             return NGX_AGAIN;
@@ -71,6 +71,7 @@ ngx_unix_recv(ngx_connection_t *c, u_char *buf, size_t size)
         ngx_log_debug3(NGX_LOG_DEBUG_EVENT, c->log, 0,
                        "recv: fd:%d %z of %uz", c->fd, n, size);
 
+        // 没拿到数据，出错了
         if (n == 0) {
             rev->ready = 0;
             rev->eof = 1;
@@ -91,6 +92,7 @@ ngx_unix_recv(ngx_connection_t *c, u_char *buf, size_t size)
             return 0;
         }
 
+        // 取到的数据，一般会直接返回n
         if (n > 0) {
 
 #if (NGX_HAVE_KQUEUE)
@@ -155,11 +157,13 @@ ngx_unix_recv(ngx_connection_t *c, u_char *buf, size_t size)
             if ((ngx_event_flags & NGX_USE_EPOLL_EVENT)
                 && ngx_use_epoll_rdhup)
             {
+                // 读取的数据量没有填满缓冲区
                 if ((size_t) n < size) {
+                    // 并且没有达到结尾
                     if (!rev->pending_eof) {
                         rev->ready = 0;
                     }
-
+                    // 将可用数设置为0
                     rev->available = 0;
                 }
 
