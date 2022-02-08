@@ -299,7 +299,11 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
      * init http{} main_conf's, merge the server{}s' srv_conf's
      * and its location{}s' loc_conf's
      */
-
+    /**
+     * 初始化main配置
+     * 合并 server srv_conf
+     * 合并 location loc_conf
+     */
     cmcf = ctx->main_conf[ngx_http_core_module.ctx_index];
     cscfp = cmcf->servers.elts;
 

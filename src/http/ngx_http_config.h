@@ -13,7 +13,10 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-
+/**
+ * @brief http配置上下文
+ * 
+ */
 typedef struct {
     void        **main_conf;
     void        **srv_conf;
