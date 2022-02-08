@@ -46,13 +46,20 @@ ngx_event_del_timer(ngx_event_t *ev)
     ev->timer_set = 0;
 }
 
-
+/**
+ * @brief 将一个事件加入到红黑树当中，它的超时未timer时间
+ * 
+ * @param ev 
+ * @param timer 
+ * @return ngx_inline 
+ */
 static ngx_inline void
-ngx_event_add_timer(ngx_event_t *ev, ngx_msec_t timer)
+ngx_event_add_timer(ngx_event_t *ev, ngx_msec_t timer) // timer说白了就是一个int的值，表示超时的事件，用于表示红黑树节点的key
 {
     ngx_msec_t      key;
     ngx_msec_int_t  diff;
 
+    // 表示该event的超时时间，为当前时间的值加上超时变量
     key = ngx_current_msec + timer;
 
     if (ev->timer_set) {
@@ -64,17 +71,18 @@ ngx_event_add_timer(ngx_event_t *ev, ngx_msec_t timer)
          */
 
         diff = (ngx_msec_int_t) (key - ev->timer.key);
-
+        // 如果旧的定时器和新的时间差小于 NGX_TIMER_LAZY_DELAY，就直接用旧的
         if (ngx_abs(diff) < NGX_TIMER_LAZY_DELAY) {
             ngx_log_debug3(NGX_LOG_DEBUG_EVENT, ev->log, 0,
                            "event timer: %d, old: %M, new: %M",
                             ngx_event_ident(ev->data), ev->timer.key, key);
             return;
         }
-
+        // 否则直接删除旧的计时器
         ngx_del_timer(ev);
     }
 
+    // 设置新的定时器
     ev->timer.key = key;
 
     ngx_log_debug3(NGX_LOG_DEBUG_EVENT, ev->log, 0,
