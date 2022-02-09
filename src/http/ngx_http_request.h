@@ -354,17 +354,25 @@ typedef struct {
 typedef struct ngx_http_postponed_request_s  ngx_http_postponed_request_t;
 
 struct ngx_http_postponed_request_s {
-    ngx_http_request_t               *request;
-    ngx_chain_t                      *out;
+    ngx_http_request_t               *request; /* 指向当前这个请求 */
+    /**
+     * 完成与后端服务器通信后，如果这个请求是不最前面的可以与客户端交互的
+     * 请求，则这个请求产生的响应数据会缓存到out缓冲区中
+     */
+    ngx_chain_t                      *out; 
     ngx_http_postponed_request_t     *next;
 };
 
 
 typedef struct ngx_http_posted_request_s  ngx_http_posted_request_t;
 
+/**
+ * @brief 子请求链表节点
+ * 
+ */
 struct ngx_http_posted_request_s {
-    ngx_http_request_t               *request;
-    ngx_http_posted_request_t        *next;
+    ngx_http_request_t               *request; /* 指向子请求 */
+    ngx_http_posted_request_t        *next; /* 指向下一个子请求 */
 };
 
 
@@ -412,9 +420,9 @@ struct ngx_http_request_s {
     ngx_uint_t                        http_version;
 
     ngx_str_t                         request_line;
-    ngx_str_t                         uri;
+    ngx_str_t                         uri;      /* 请求路径 */
     ngx_str_t                         args;
-    ngx_str_t                         exten;
+    ngx_str_t                         exten;    /* 路径的扩展名，例如html */
     ngx_str_t                         unparsed_uri;
 
     ngx_str_t                         method_name;
@@ -423,10 +431,10 @@ struct ngx_http_request_s {
 
     ngx_chain_t                      *out;
     ngx_http_request_t               *main;
-    ngx_http_request_t               *parent;
-    ngx_http_postponed_request_t     *postponed;
-    ngx_http_post_subrequest_t       *post_subrequest;
-    ngx_http_posted_request_t        *posted_requests;
+    ngx_http_request_t               *parent; /* 如果是子请求则指向父请求，如果是父请求则为NULL */
+    ngx_http_postponed_request_t     *postponed; /* 指向第一个子请求，构成一颗树结构 */
+    ngx_http_post_subrequest_t       *post_subrequest; 
+    ngx_http_posted_request_t        *posted_requests; /* 这个指针只对原始请求有效，其它请求则会空。如果是原始请求，则指向第一个子请求链表节点 */
 
     ngx_int_t                         phase_handler;
     ngx_http_handler_pt               content_handler;

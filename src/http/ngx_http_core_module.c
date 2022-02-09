@@ -815,7 +815,7 @@ ngx_module_t  ngx_http_core_module = {
 
 ngx_str_t  ngx_http_core_get_method = { 3, (u_char *) "GET" };
 
-
+// http处理分发核心函数，主要用于设置write写事件回调函数ngx_http_core_run_phases
 void
 ngx_http_handler(ngx_http_request_t *r)
 {
@@ -854,6 +854,7 @@ ngx_http_handler(ngx_http_request_t *r)
     r->gzip_vary = 0;
 #endif
 
+    // 设置write事件回调函数，并且执行ngx_http_core_run_phases回调函数
     r->write_event_handler = ngx_http_core_run_phases;
     ngx_http_core_run_phases(r);
 }
@@ -2310,7 +2311,17 @@ ngx_http_gzip_quantity(u_char *p, u_char *last)
 
 #endif
 
-
+/**
+ * 创建一个子请求，使用链表构造一颗树形结构将子请求添加到原始请求的链表
+ * 模块，这样原始请求可以知道所有子请求，包括孙子请求
+ * @param r 
+ * @param uri 
+ * @param args 
+ * @param psr 
+ * @param ps 
+ * @param flags 
+ * @return ngx_int_t 
+ */
 ngx_int_t
 ngx_http_subrequest(ngx_http_request_t *r,
     ngx_str_t *uri, ngx_str_t *args, ngx_http_request_t **psr,
@@ -2391,7 +2402,7 @@ ngx_http_subrequest(ngx_http_request_t *r,
 #if (NGX_HTTP_V2)
     sr->stream = r->stream;
 #endif
-
+    // 子请求方法只能是get
     sr->method = NGX_HTTP_GET;
     sr->http_version = r->http_version;
 
