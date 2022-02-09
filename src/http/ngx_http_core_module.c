@@ -859,7 +859,9 @@ ngx_http_handler(ngx_http_request_t *r)
     ngx_http_core_run_phases(r);
 }
 
-
+/**
+ * 11个阶段处理HTTP请求
+ */
 void
 ngx_http_core_run_phases(ngx_http_request_t *r)
 {
@@ -870,7 +872,7 @@ ngx_http_core_run_phases(ngx_http_request_t *r)
     cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
 
     ph = cmcf->phase_engine.handlers;
-
+    // 遍历解析和处理各个阶段的HTTP请求 如果返回rc==NGX_AGAIN 则交由下一个阶段处理；返回OK则返回结果
     while (ph[r->phase_handler].checker) {
 
         rc = ph[r->phase_handler].checker(r, &ph[r->phase_handler]);
@@ -881,7 +883,13 @@ ngx_http_core_run_phases(ngx_http_request_t *r)
     }
 }
 
-
+/**
+ * @brief 内容接收阶段
+ * 
+ * @param r 
+ * @param ph 
+ * @return ngx_int_t 
+ */
 ngx_int_t
 ngx_http_core_generic_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 {
@@ -895,18 +903,20 @@ ngx_http_core_generic_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "generic phase: %ui", r->phase_handler);
 
+    // handler 回调函数
     rc = ph->handler(r);
 
+    // handler返回OK，执行下一个阶段handler
     if (rc == NGX_OK) {
         r->phase_handler = ph->next;
         return NGX_AGAIN;
     }
-
+    // handler返回DECLINED, 尝试执行下一个handler（不是下阶段）
     if (rc == NGX_DECLINED) {
         r->phase_handler++;
         return NGX_AGAIN;
     }
-
+    // handler返回AGEGIN或者DONE，
     if (rc == NGX_AGAIN || rc == NGX_DONE) {
         return NGX_OK;
     }
