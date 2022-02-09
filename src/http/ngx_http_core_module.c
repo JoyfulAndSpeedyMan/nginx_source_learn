@@ -1837,7 +1837,12 @@ ngx_http_send_response(ngx_http_request_t *r, ngx_uint_t status,
     return ngx_http_output_filter(r, &out);
 }
 
-
+/**
+ * @brief 调用ngx_http_send_header发送响应行和响应头部
+ * 
+ * @param r 
+ * @return ngx_int_t 
+ */
 ngx_int_t
 ngx_http_send_header(ngx_http_request_t *r)
 {
@@ -1855,11 +1860,17 @@ ngx_http_send_header(ngx_http_request_t *r)
         r->headers_out.status = r->err_status;
         r->headers_out.status_line.len = 0;
     }
-
+    // 从ngx_http_top_header_filter指针开始遍历所有的HTTP头部过滤模块，
     return ngx_http_top_header_filter(r);
 }
 
-
+/**
+ * @brief 调用ngx_http_output_filter方法即可向客户端发送HTTP响应包体
+ * 
+ * @param r 
+ * @param in 
+ * @return ngx_int_t 
+ */
 ngx_int_t
 ngx_http_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
@@ -1870,7 +1881,7 @@ ngx_http_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, c->log, 0,
                    "http output filter \"%V?%V\"", &r->uri, &r->args);
-
+    // 从ngx_http_top_body_filter指针开始遍历所有的HTTP包体过滤模块
     rc = ngx_http_top_body_filter(r, in);
 
     if (rc == NGX_ERROR) {

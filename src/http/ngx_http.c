@@ -70,9 +70,12 @@ static ngx_int_t ngx_http_add_addrs6(ngx_conf_t *cf, ngx_http_port_t *hport,
 
 ngx_uint_t   ngx_http_max_module;
 
-
-ngx_http_output_header_filter_pt  ngx_http_top_header_filter;
-ngx_http_output_body_filter_pt    ngx_http_top_body_filter;
+/**
+ * 注意对于HTTP过滤模块来说，在ngx_modules数组中的位置越靠后，在实陈执行请求时就越优先执行。因为在初始化HTTP过滤模块
+ * 时，每一个http过滤模块都是将自己插入到整个单链表的首部的。
+ */
+ngx_http_output_header_filter_pt  ngx_http_top_header_filter; /* 所有的HTTP头部过滤模块都添加到该指针上 ngx_http_send_header中调用链表中所有处理方法 */
+ngx_http_output_body_filter_pt    ngx_http_top_body_filter; /* 所有的HTTP包体部分都是添加到该指针中,在ngx_http_output_filter中一次调用链表中的各个函数 */
 ngx_http_request_body_filter_pt   ngx_http_top_request_body_filter;
 
 

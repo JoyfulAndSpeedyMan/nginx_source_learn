@@ -336,7 +336,13 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
     ngx_event_process_posted(cycle, &ngx_posted_events);
 }
 
-
+/**
+ * @brief 挂载读事件
+ * 
+ * @param rev 
+ * @param flags 
+ * @return ngx_int_t 
+ */
 ngx_int_t
 ngx_handle_read_event(ngx_event_t *rev, ngx_uint_t flags)
 {
