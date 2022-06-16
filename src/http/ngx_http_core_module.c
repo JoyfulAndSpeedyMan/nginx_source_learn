@@ -815,7 +815,7 @@ ngx_module_t  ngx_http_core_module = {
 
 ngx_str_t  ngx_http_core_get_method = { 3, (u_char *) "GET" };
 
-
+// http处理分发核心函数，主要用于设置write写事件回调函数ngx_http_core_run_phases
 void
 ngx_http_handler(ngx_http_request_t *r)
 {
@@ -854,11 +854,14 @@ ngx_http_handler(ngx_http_request_t *r)
     r->gzip_vary = 0;
 #endif
 
+    // 设置write事件回调函数，并且执行ngx_http_core_run_phases回调函数
     r->write_event_handler = ngx_http_core_run_phases;
     ngx_http_core_run_phases(r);
 }
 
-
+/**
+ * 11个阶段处理HTTP请求
+ */
 void
 ngx_http_core_run_phases(ngx_http_request_t *r)
 {
@@ -869,7 +872,7 @@ ngx_http_core_run_phases(ngx_http_request_t *r)
     cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
 
     ph = cmcf->phase_engine.handlers;
-
+    // 遍历解析和处理各个阶段的HTTP请求 如果返回rc==NGX_AGAIN 则交由下一个阶段处理；返回OK则返回结果
     while (ph[r->phase_handler].checker) {
 
         rc = ph[r->phase_handler].checker(r, &ph[r->phase_handler]);
@@ -880,7 +883,13 @@ ngx_http_core_run_phases(ngx_http_request_t *r)
     }
 }
 
-
+/**
+ * @brief 内容接收阶段
+ * 
+ * @param r 
+ * @param ph 
+ * @return ngx_int_t 
+ */
 ngx_int_t
 ngx_http_core_generic_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 {
@@ -894,18 +903,20 @@ ngx_http_core_generic_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "generic phase: %ui", r->phase_handler);
 
+    // handler 回调函数
     rc = ph->handler(r);
 
+    // handler返回OK，执行下一个阶段handler
     if (rc == NGX_OK) {
         r->phase_handler = ph->next;
         return NGX_AGAIN;
     }
-
+    // handler返回DECLINED, 尝试执行下一个handler（不是下阶段）
     if (rc == NGX_DECLINED) {
         r->phase_handler++;
         return NGX_AGAIN;
     }
-
+    // handler返回AGEGIN或者DONE，
     if (rc == NGX_AGAIN || rc == NGX_DONE) {
         return NGX_OK;
     }
@@ -1826,7 +1837,12 @@ ngx_http_send_response(ngx_http_request_t *r, ngx_uint_t status,
     return ngx_http_output_filter(r, &out);
 }
 
-
+/**
+ * @brief 调用ngx_http_send_header发送响应行和响应头部
+ * 
+ * @param r 
+ * @return ngx_int_t 
+ */
 ngx_int_t
 ngx_http_send_header(ngx_http_request_t *r)
 {
@@ -1844,11 +1860,17 @@ ngx_http_send_header(ngx_http_request_t *r)
         r->headers_out.status = r->err_status;
         r->headers_out.status_line.len = 0;
     }
-
+    // 从ngx_http_top_header_filter指针开始遍历所有的HTTP头部过滤模块，
     return ngx_http_top_header_filter(r);
 }
 
-
+/**
+ * @brief 调用ngx_http_output_filter方法即可向客户端发送HTTP响应包体
+ * 
+ * @param r 
+ * @param in 
+ * @return ngx_int_t 
+ */
 ngx_int_t
 ngx_http_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
@@ -1859,7 +1881,7 @@ ngx_http_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, c->log, 0,
                    "http output filter \"%V?%V\"", &r->uri, &r->args);
-
+    // 从ngx_http_top_body_filter指针开始遍历所有的HTTP包体过滤模块
     rc = ngx_http_top_body_filter(r, in);
 
     if (rc == NGX_ERROR) {

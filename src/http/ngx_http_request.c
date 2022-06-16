@@ -1195,7 +1195,7 @@ ngx_http_process_request_line(ngx_event_t *rev)
                 break;
             }
 
-
+            // 初始化header链表
             if (ngx_list_init(&r->headers_in.headers, r->pool, 20,
                               sizeof(ngx_table_elt_t))
                 != NGX_OK)
@@ -2102,10 +2102,10 @@ ngx_http_process_request_header(ngx_http_request_t *r)
     return NGX_OK;
 }
 
-
 /**
- * @brief 配置处理body的handler
- * 
+ * ngx_http_process_request：设置read和write的回调函数ngx_http_request_handler，
+ * ngx_http_request_handler通过状态机来判断是读事件还是写事件。调用HTTP模块的filter链，
+ * filter链分为header和body链两部分
  * @param r 
  */
 void
@@ -2192,10 +2192,11 @@ ngx_http_process_request(ngx_http_request_t *r)
     r->stat_writing = 1;
 #endif
 
+    // read和write事件都设置为：ngx_http_request_handler，通过事件状态来判断
     c->read->handler = ngx_http_request_handler;
     c->write->handler = ngx_http_request_handler;
     r->read_event_handler = ngx_http_block_reading;
-
+    // http处理分发核心函数
     ngx_http_handler(r);
 }
 
@@ -2460,7 +2461,11 @@ ngx_http_find_virtual_server(ngx_connection_t *c,
     return NGX_DECLINED;
 }
 
-
+/**
+ * @brief read和write事件都设置为：ngx_http_request_handler，通过事件状态来判断
+ * 
+ * @param ev 
+ */
 static void
 ngx_http_request_handler(ngx_event_t *ev)
 {
@@ -2494,18 +2499,38 @@ ngx_http_request_handler(ngx_event_t *ev)
         r->read_event_handler(r);
     }
 
+    // 主要用于处理subrequest 子请求
     ngx_http_run_posted_requests(c);
 }
 
-
+/**
+ * 主要用于处理subrequest 子请求
+ *
+ * location /main.htm {
+ *   # content of main.htm: main
+ *   add_before_body /hello.htm; # 发起一个子请求，请求给定的uri，并且将响应结果追加到主题响应的内容之前
+ *   add_after_body /world.htm; # 发起一个子请求，请求给定的uri，并且将响应结果追加到主题响应的内容之后。
+ * }
+ * 
+ * location /hello.htm {
+ *  	#content of hello.htm: hello
+ * }
+ * 
+ * location /world.htm {
+ *  	#content of world.htm: world
+ * }
+ *
+ */
 void
 ngx_http_run_posted_requests(ngx_connection_t *c)
 {
     ngx_http_request_t         *r;
     ngx_http_posted_request_t  *pr;
 
+    // 遍历
     for ( ;; ) {
 
+        // 如果连接已经销毁，则退出
         if (c->destroyed) {
             return;
         }
@@ -2525,7 +2550,8 @@ ngx_http_run_posted_requests(ngx_connection_t *c)
 
         ngx_log_debug2(NGX_LOG_DEBUG_HTTP, c->log, 0,
                        "http posted request: \"%V?%V\"", &r->uri, &r->args);
-
+                       
+        // 调用write handler
         r->write_event_handler(r);
     }
 }

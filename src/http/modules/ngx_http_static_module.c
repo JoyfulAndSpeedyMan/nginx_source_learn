@@ -279,7 +279,12 @@ ngx_http_static_handler(ngx_http_request_t *r)
     return ngx_http_output_filter(r, &out);
 }
 
-
+/**
+ * @brief  模块初始化
+ * 
+ * @param cf 
+ * @return ngx_int_t 
+ */
 static ngx_int_t
 ngx_http_static_init(ngx_conf_t *cf)
 {
@@ -287,7 +292,7 @@ ngx_http_static_init(ngx_conf_t *cf)
     ngx_http_core_main_conf_t  *cmcf;
 
     cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
-
+    // 注册到NGX_HTTP_CONTENT_PHASE阶段
     h = ngx_array_push(&cmcf->phases[NGX_HTTP_CONTENT_PHASE].handlers);
     if (h == NULL) {
         return NGX_ERROR;

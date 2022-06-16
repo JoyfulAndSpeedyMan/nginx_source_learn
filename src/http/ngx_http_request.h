@@ -430,9 +430,9 @@ struct ngx_http_request_s {
     ngx_uint_t                        http_version;
 
     ngx_str_t                         request_line;
-    ngx_str_t                         uri;
+    ngx_str_t                         uri;      /* 请求路径 */
     ngx_str_t                         args;
-    ngx_str_t                         exten;
+    ngx_str_t                         exten;    /* 路径的扩展名，例如html */
     ngx_str_t                         unparsed_uri;
 
     ngx_str_t                         method_name;

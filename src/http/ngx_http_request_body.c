@@ -606,7 +606,12 @@ ngx_http_write_request_body(ngx_http_request_t *r)
     return NGX_OK;
 }
 
-
+/**
+ * @brief 主动的丢弃客户端发过的请求体body
+ * 
+ * @param r 
+ * @return ngx_int_t 
+ */
 ngx_int_t
 ngx_http_discard_request_body(ngx_http_request_t *r)
 {
@@ -614,6 +619,7 @@ ngx_http_discard_request_body(ngx_http_request_t *r)
     ngx_int_t     rc;
     ngx_event_t  *rev;
 
+    // 子请求或者已经调用过本函数，则不需要处理
     if (r != r->main || r->discard_body || r->request_body) {
         return NGX_OK;
     }
@@ -633,6 +639,7 @@ ngx_http_discard_request_body(ngx_http_request_t *r)
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, rev->log, 0, "http set discard body");
 
+    // 删掉读事件上的定时器，因为这时本身就不需要请求体，所以也无所谓客户端发送的快还是慢了
     if (rev->timer_set) {
         ngx_del_timer(rev);
     }
@@ -641,6 +648,7 @@ ngx_http_discard_request_body(ngx_http_request_t *r)
         return NGX_OK;
     }
 
+    // 检查是否已经读取了数据
     size = r->header_in->last - r->header_in->pos;
 
     if (size || r->headers_in.chunked) {
@@ -654,9 +662,10 @@ ngx_http_discard_request_body(ngx_http_request_t *r)
             return NGX_OK;
         }
     }
-
+    // 读取的数据会直接丢弃
     rc = ngx_http_read_discarded_request_body(r);
 
+    // 要读取的数据已经读取完毕并丢弃，置关闭标志
     if (rc == NGX_OK) {
         r->lingering_close = 0;
         return NGX_OK;
@@ -667,13 +676,15 @@ ngx_http_discard_request_body(ngx_http_request_t *r)
     }
 
     /* rc == NGX_AGAIN */
-
+    // 数据还没有读取完毕，则挂载ngx_http_discarded_request_body_handler处理函数
     r->read_event_handler = ngx_http_discarded_request_body_handler;
 
+    // 挂载读事件
     if (ngx_handle_read_event(rev, 0) != NGX_OK) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
+    // 数据还没有读取完毕，置变量，read_event_handler会下次处理
     r->count++;
     r->discard_body = 1;
 
@@ -699,7 +710,10 @@ ngx_http_discarded_request_body_handler(ngx_http_request_t *r)
         ngx_http_finalize_request(r, NGX_ERROR);
         return;
     }
-
+    //在ngx_http_finalize_connection()函数中，如果检查到还有未丢弃的请求体时，
+    //nginx会添加一个读事件定时器，它的时长为lingering_timeout指令所指定，
+    //默认为5秒，不过这个时间仅仅两次读事件之间的超时时间，
+    //等待请求体的总时长为lingering_time指令所指定，默认为30秒
     if (r->lingering_time) {
         timer = (ngx_msec_t) r->lingering_time - (ngx_msec_t) ngx_time();
 
