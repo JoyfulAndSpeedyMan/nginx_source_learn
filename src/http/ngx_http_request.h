@@ -353,17 +353,35 @@ typedef struct {
 
 typedef struct ngx_http_postponed_request_s  ngx_http_postponed_request_t;
 
+/**
+ * @brief 子请求链表结构
+ * 
+ */
 struct ngx_http_postponed_request_s {
+
+    // 指向当前这个请求
     ngx_http_request_t               *request;
+
+    // 完成与后端服务器通信后，如果这个请求不是最前面的可以与客户端交互的请求，
+	// 则这个请求产生的响应数据会缓存到out缓冲区中
     ngx_chain_t                      *out;
+
+    //指向下一个子请求，构成一个链表
     ngx_http_postponed_request_t     *next;
 };
 
 
 typedef struct ngx_http_posted_request_s  ngx_http_posted_request_t;
 
+/**
+ * @brief 单向链表结构
+ * 
+ */
 struct ngx_http_posted_request_s {
+    // 指向当前子请求
     ngx_http_request_t               *request;
+
+    // 指向下一个子请求
     ngx_http_posted_request_t        *next;
 };
 
@@ -423,9 +441,20 @@ struct ngx_http_request_s {
 
     ngx_chain_t                      *out;
     ngx_http_request_t               *main;
+    
+    // 如果是子请求则指向父请求，如果是父请求则为NULL
     ngx_http_request_t               *parent;
+
+    // 指向第一个子请求，构成一颗树结构
     ngx_http_postponed_request_t     *postponed;
+
+
     ngx_http_post_subrequest_t       *post_subrequest;
+
+    /**
+     * 一个所有子请求和孙子请求的单向链表。这个指针只对原始请求有效，其它
+     * 请求则会空。如果是原始请求，则指向第一个子请求链表节点。
+     */
     ngx_http_posted_request_t        *posted_requests;
 
     ngx_int_t                         phase_handler;

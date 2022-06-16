@@ -1093,6 +1093,13 @@ ngx_close_listening_sockets(ngx_cycle_t *cycle)
 }
 
 
+/**
+ * @brief 从可用连接池中获取一个连接对象
+ * 
+ * @param s 连接的句柄
+ * @param log 
+ * @return ngx_connection_t* 
+ */
 ngx_connection_t *
 ngx_get_connection(ngx_socket_t s, ngx_log_t *log)
 {

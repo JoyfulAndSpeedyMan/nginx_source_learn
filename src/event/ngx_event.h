@@ -404,6 +404,7 @@ extern ngx_uint_t            ngx_use_epoll_rdhup;
 #endif
 
 
+// 如果使用的是epoll，那么对应的函数就是 ngx_epoll_process_events
 #define ngx_process_events   ngx_event_actions.process_events
 #define ngx_done_events      ngx_event_actions.done
 

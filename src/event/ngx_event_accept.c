@@ -14,7 +14,7 @@ static ngx_int_t ngx_disable_accept_events(ngx_cycle_t *cycle, ngx_uint_t all);
 static void ngx_close_accepted_connection(ngx_connection_t *c);
 
 /**
- * @brief 读事件回调（accept）
+ * @brief 读事件回调（accept），tcp刚开始建立链接的handler都是这个
  * 
  * @param ev 
  */
@@ -66,9 +66,14 @@ ngx_event_accept(ngx_event_t *ev)
             s = accept(lc->fd, &sa.sockaddr, &socklen);
         }
 #else
+        // accept远程连接
+        // lc->fd 监听端口socket句柄
+        // &sa.sockaddr 用来接受远程连接地址
+        // addr长度
         s = accept(lc->fd, &sa.sockaddr, &socklen);
 #endif
-
+        
+        // accpet出错
         if (s == (ngx_socket_t) -1) {
             err = ngx_socket_errno;
 
@@ -140,6 +145,7 @@ ngx_event_accept(ngx_event_t *ev)
         ngx_accept_disabled = ngx_cycle->connection_n / 8
                               - ngx_cycle->free_connection_n;
 
+        // 获取一个连接对象
         c = ngx_get_connection(s, ev->log);
 
         if (c == NULL) {
@@ -150,13 +156,14 @@ ngx_event_accept(ngx_event_t *ev)
 
             return;
         }
-
+        // TCP
         c->type = SOCK_STREAM;
 
 #if (NGX_STAT_STUB)
         (void) ngx_atomic_fetch_add(ngx_stat_active, 1);
 #endif
 
+        // 创建该连接所使用的内存池
         c->pool = ngx_create_pool(ls->pool_size, ev->log);
         if (c->pool == NULL) {
             ngx_close_accepted_connection(c);
@@ -166,7 +173,7 @@ ngx_event_accept(ngx_event_t *ev)
         if (socklen > (socklen_t) sizeof(ngx_sockaddr_t)) {
             socklen = sizeof(ngx_sockaddr_t);
         }
-
+        // 保存地址信息（本地地址和远程地址）
         c->sockaddr = ngx_palloc(c->pool, socklen);
         if (c->sockaddr == NULL) {
             ngx_close_accepted_connection(c);
@@ -175,6 +182,7 @@ ngx_event_accept(ngx_event_t *ev)
 
         ngx_memcpy(c->sockaddr, &sa, socklen);
 
+        // 创建log对象 
         log = ngx_palloc(c->pool, sizeof(ngx_log_t));
         if (log == NULL) {
             ngx_close_accepted_connection(c);
@@ -206,6 +214,7 @@ ngx_event_accept(ngx_event_t *ev)
 
         *log = ls->log;
 
+        // 发收数据
         c->recv = ngx_recv;
         c->send = ngx_send;
         c->recv_chain = ngx_recv_chain;
@@ -214,6 +223,7 @@ ngx_event_accept(ngx_event_t *ev)
         c->log = log;
         c->pool->log = log;
 
+        // 本地端口相关数据
         c->socklen = socklen;
         c->listening = ls;
         c->local_sockaddr = ls->sockaddr;
@@ -229,7 +239,7 @@ ngx_event_accept(ngx_event_t *ev)
 #endif
         }
 #endif
-
+        // 读写事件
         rev = c->read;
         wev = c->write;
 
@@ -312,6 +322,7 @@ ngx_event_accept(ngx_event_t *ev)
         log->handler = NULL;
 
         // 回调函数  ngx_http_init_connection
+        // 接收连接后的回调函数，回调方法：ngx_http_init_connection
         ls->handler(c);
 
         if (ngx_event_flags & NGX_USE_KQUEUE_EVENT) {

@@ -203,9 +203,10 @@ ngx_http_header_t  ngx_http_headers_in[] = {
 };
 
 /**
- * @brief 侦听套接字 的回调函数。
- * 该回调函数在ngx_event_accept函数中回调；
- * 回调之后，会将读取事件回调函数rev->handler()修改成方法：ngx_http_wait_request_handler
+ * @brief
+ * 该回调函数在ngx_event_accept函数中回调（accept之后回调）
+ * 初始化http相关的数据
+ * 然后会将读取事件回调函数rev->handler()修改成方法：ngx_http_wait_request_handler
  * 
  * @param c 
  */
@@ -383,6 +384,7 @@ ngx_http_init_connection(ngx_connection_t *c)
 /**
  * read事件回调函数；主要处理读取事件
  * 等待处理http request 数据
+ * 正常的话会创建一个ngx_http_request_t对象，并将读事件回调函数设置为ngx_http_process_request_line，准备解析http请求行
  */
 static void
 ngx_http_wait_request_handler(ngx_event_t *rev)
@@ -1179,6 +1181,7 @@ ngx_http_process_request_line(ngx_event_t *rev)
                 r->headers_in.server = host;
             }
 
+            // http v0.9，没有header，所以不用解析，直接处理body就好了
             if (r->http_version < NGX_HTTP_VERSION_10) {
 
                 if (r->headers_in.server.len == 0
@@ -1187,7 +1190,7 @@ ngx_http_process_request_line(ngx_event_t *rev)
                 {
                     break;
                 }
-
+                // 处理body
                 ngx_http_process_request(r);
                 break;
             }
@@ -2100,6 +2103,11 @@ ngx_http_process_request_header(ngx_http_request_t *r)
 }
 
 
+/**
+ * @brief 配置处理body的handler
+ * 
+ * @param r 
+ */
 void
 ngx_http_process_request(ngx_http_request_t *r)
 {

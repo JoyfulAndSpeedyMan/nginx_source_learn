@@ -2310,7 +2310,17 @@ ngx_http_gzip_quantity(u_char *p, u_char *last)
 
 #endif
 
-
+/**
+ * @brief 创建一个子请求，使用链表构造一颗树形结构
+ * 将子请求添加到原始请求的链表模块，这样原始请求可以知道所有子请求，包括孙子请求
+ * @param r 父请求
+ * @param uri 
+ * @param args 
+ * @param psr 
+ * @param ps 
+ * @param flags 
+ * @return ngx_int_t 
+ */
 ngx_int_t
 ngx_http_subrequest(ngx_http_request_t *r,
     ngx_str_t *uri, ngx_str_t *args, ngx_http_request_t **psr,
@@ -2344,6 +2354,7 @@ ngx_http_subrequest(ngx_http_request_t *r,
         return NGX_ERROR;
     }
 
+    // 创建一个子请求
     sr = ngx_pcalloc(r->pool, sizeof(ngx_http_request_t));
     if (sr == NULL) {
         return NGX_ERROR;
@@ -2386,12 +2397,13 @@ ngx_http_subrequest(ngx_http_request_t *r,
     ngx_http_clear_accept_ranges(sr);
     ngx_http_clear_last_modified(sr);
 
+    // 复用父请求
     sr->request_body = r->request_body;
 
 #if (NGX_HTTP_V2)
     sr->stream = r->stream;
 #endif
-
+    // 子请求方法只能是get
     sr->method = NGX_HTTP_GET;
     sr->http_version = r->http_version;
 
@@ -2416,10 +2428,15 @@ ngx_http_subrequest(ngx_http_request_t *r,
 
     ngx_http_set_exten(sr);
 
+    // 主请求
     sr->main = r->main;
+    //指向父请求
     sr->parent = r;
     sr->post_subrequest = ps;
+
+    //子请求不跟客户端交互，因此不需要读取客户端事件
     sr->read_event_handler = ngx_http_request_empty_handler;
+    //调用各个http模块协同处理这个请求
     sr->write_event_handler = ngx_http_handler;
 
     sr->variables = r->variables;
@@ -2431,6 +2448,10 @@ ngx_http_subrequest(ngx_http_request_t *r,
     }
 
     if (!sr->background) {
+
+        //  复用data存放最前面的请求，这个请求的数据可以直接发送给客户端。其它的子请求需要缓存数据，等待
+	    //  最前面的请求结束。如果r为子请求，r没有子请求了，且r为最前面的请求。则最前面的请求将会被切换为
+	    //  这个刚刚创建的r的子请求
         if (c->data == r && r->postponed == NULL) {
             c->data = sr;
         }
@@ -2444,6 +2465,7 @@ ngx_http_subrequest(ngx_http_request_t *r,
         pr->out = NULL;
         pr->next = NULL;
 
+        //将子请求添加到链表,构成一个树+链表结构
         if (r->postponed) {
             for (p = r->postponed; p->next; p = p->next) { /* void */ }
             p->next = pr;
