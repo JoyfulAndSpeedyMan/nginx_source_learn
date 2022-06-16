@@ -454,6 +454,9 @@ ngx_http_wait_request_handler(ngx_event_t *rev)
      * 接收数据的回调函数：os/ngx_recv.c文件夹中的 ngx_unix_recv
      * ngx_unix_recv：主要调用系统的recv函数，循环接收TCP管道中的数据
      */
+    // Note: nginx epoll默认使用EL模式，一个事件中的数据如果没有读取完成，那么下次这个事件也不会再次出现。
+    // 这里只是读取一次缓冲区大小的数据，如果读取到数据，后面还会继续在ngx_http_process_request_line等http解析流程中继续读取。
+    // 所以不会有丢数据的情况
     n = c->recv(c, b->last, size);
 
     /*
