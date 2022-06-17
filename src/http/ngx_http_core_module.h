@@ -140,13 +140,17 @@ typedef ngx_int_t (*ngx_http_phase_handler_pt)(ngx_http_request_t *r,
     ngx_http_phase_handler_t *ph);
 
 struct ngx_http_phase_handler_s {
+    // checker对应于一个周期
     ngx_http_phase_handler_pt  checker;
+    // 这个周期的handler
     ngx_http_handler_pt        handler;
+    // 下一个周期位置的开始索引
     ngx_uint_t                 next;
 };
 
-
+// 在ngx_http_init_phase_handlers中赋值
 typedef struct {
+    // handlers数组
     ngx_http_phase_handler_t  *handlers;
     ngx_uint_t                 server_rewrite_index;
     ngx_uint_t                 location_rewrite_index;

@@ -2198,8 +2198,9 @@ ngx_http_process_request(ngx_http_request_t *r)
     // read和write事件都设置为：ngx_http_request_handler，通过事件状态来判断
     c->read->handler = ngx_http_request_handler;
     c->write->handler = ngx_http_request_handler;
+    // request的读事件回调
     r->read_event_handler = ngx_http_block_reading;
-    // http处理分发核心函数
+    // http处理分发核心函数（会设置request的写事件回调）
     ngx_http_handler(r);
 }
 
@@ -2465,7 +2466,7 @@ ngx_http_find_virtual_server(ngx_connection_t *c,
 }
 
 /**
- * @brief read和write事件都设置为：ngx_http_request_handler，通过事件状态来判断
+ * @brief 回调ngx_http_request_td读写handler，通过事件状态来判断
  * 
  * @param ev 
  */

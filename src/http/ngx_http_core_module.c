@@ -815,7 +815,7 @@ ngx_module_t  ngx_http_core_module = {
 
 ngx_str_t  ngx_http_core_get_method = { 3, (u_char *) "GET" };
 
-// http处理分发核心函数，主要用于设置write写事件回调函数ngx_http_core_run_phases
+// http处理分发核心函数，主要用于设置request的write写事件回调函数ngx_http_core_run_phases
 void
 ngx_http_handler(ngx_http_request_t *r)
 {
